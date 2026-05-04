@@ -73,6 +73,7 @@ instance FromJSON EConfigWithUsage where
               <*> v ..:? "etherscanApiKey"
               <*> v ..:? "projectName"
               <*> v ..:? "disableOnchainSources" ..!= False
+              <*> v ..:? "useColor" ..!= True
       where
       useKey k = modify' $ Set.insert k
       x ..:? k = useKey k >> lift (x .:? k)

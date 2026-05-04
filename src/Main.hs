@@ -155,6 +155,7 @@ data Options = Options
   , cliSymExecTimeout   :: Maybe Int
   , cliSymExecNSolvers  :: Maybe Int
   , cliDisableOnchainSources :: Bool
+  , cliUseColor :: Maybe Bool
   }
 
 optsParser :: ParserInfo Options
@@ -249,6 +250,9 @@ options = Options . NE.fromList
     <> help ("Number of symbolic execution solvers to run in parallel for each task (assuming sym-exec is enabled). Default is " ++ show defaultSymExecNWorkers))
   <*> switch (long "disable-onchain-sources"
     <> help "Disable on-chain coverage reports and fetching of sources from Sourcify and Etherscan.")
+  <*> optional (option bool $ long "use-color"
+    <> metavar "BOOL"
+    <> help "Enable or disable colored output (true/false). Default is true.")
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption
@@ -268,6 +272,7 @@ overrideConfig config Options{..} = do
            , rpcBlock = cliRpcBlock <|> envRpcBlock <|> config.rpcBlock
            , etherscanApiKey = envEtherscanApiKey <|> config.etherscanApiKey
            , disableOnchainSources = cliDisableOnchainSources || config.disableOnchainSources
+           , useColor = fromMaybe config.useColor cliUseColor
            }
            & overrideFormat
   where

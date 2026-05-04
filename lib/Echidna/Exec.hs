@@ -14,6 +14,7 @@ import Data.ByteString qualified as BS
 import Data.IORef (readIORef, newIORef, writeIORef, modifyIORef')
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, fromJust)
+import Data.String.AnsiEscapeCodes.Strip.Text (stripAnsiEscapeCodes)
 import Data.Text qualified as T
 import Data.Vector qualified as V
 import Data.Vector.Unboxed.Mutable qualified as VMut
@@ -74,9 +75,9 @@ pattern Illegal <- VMFailure (classifyError -> IllegalE)
 
 -- | Given an execution error, throw the appropriate exception.
 -- Also optionally takes a DappInfo and VM, which are used to show the stack trace.
-vmExcept :: MonadThrow m => Maybe (DappInfo, VM Concrete) -> EvmError -> m ()
-vmExcept traceInfo e =
-  let trace = uncurry showTraceTree <$> traceInfo
+vmExcept :: MonadThrow m => Bool -> Maybe (DappInfo, VM Concrete) -> EvmError -> m ()
+vmExcept useColor traceInfo e =
+  let trace = (if useColor then id else stripAnsiEscapeCodes) . uncurry showTraceTree <$> traceInfo
   in throwM $
     case VMFailure e of {Illegal -> IllegalExec e; _ -> UnknownFailure e trace}
 
@@ -196,7 +197,8 @@ execTxWith executeTx tx = do
     (VMFailure x, _) -> do
       dapp <- asks (.dapp)
       vm <- get
-      vmExcept (Just (dapp, vm)) x
+      useColor <- asks (.cfg.useColor)
+      vmExcept useColor (Just (dapp, vm)) x
     (VMSuccess (ConcreteBuf bytecode'), SolCreate _) -> do
       -- Handle contract creation.
       #env % #contracts % at (LitAddr tx.dst) % _Just % #code .= InitCode mempty mempty

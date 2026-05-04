@@ -8,6 +8,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromJust, fromMaybe)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
+import Data.String.AnsiEscapeCodes.Strip.Text (stripAnsiEscapeCodes)
 import Data.Time (LocalTime)
 import Optics
 
@@ -142,6 +143,10 @@ ppCorpus = do
 
 -- | Pretty-print the status of a solved test.
 ppFail :: (MonadReader Env m, MonadIO m) => Maybe (Int, Int) -> VM Concrete -> [Tx] -> m String
+showTraceTree' dapp vm = do
+  useColor <- asks (.cfg.useColor)
+  pure $ if useColor then showTraceTree dapp vm else stripAnsiEscapeCodes (showTraceTree dapp vm)
+
 ppFail _ _ []  = pure "failed with no transactions made ⁉️ "
 ppFail b vm xs = do
   let status = case b of
@@ -149,9 +154,10 @@ ppFail b vm xs = do
         Just (n,m) -> ", shrinking " <> progress n m
   prettyTxs <- mapM (ppTx vm $ length (nub $ (.src) <$> xs) /= 1) xs
   dappInfo <- asks (.dapp)
+  traces <- showTraceTree' dappInfo vm
   pure $ "failed!💥  \n  Call sequence" <> status <> ":\n"
          <> unlines (("    " <>) <$> prettyTxs) <> "\n"
-         <> "Traces: \n" <> T.unpack (showTraceTree dappInfo vm)
+         <> "Traces: \n" <> T.unpack traces
 
 -- | Pretty-print the status of a solved test.
 ppFailWithTraces :: (MonadReader Env m, MonadIO m) => Maybe (Int, Int) -> VM Concrete -> [(Tx, VM Concrete)] -> m String
@@ -165,10 +171,12 @@ ppFailWithTraces b finalVM results = do
   let printName = length (nub $ (.src) <$> xs) /= 1
   prettyTxs <- forM results $ \(tx, vm) -> do
     txPrinted <- ppTx vm printName tx
-    pure $ txPrinted <> "\nTraces:\n" <> T.unpack (showTraceTree dappInfo vm)
+    traces <- showTraceTree' dappInfo vm
+    pure $ txPrinted <> "\nTraces:\n" <> T.unpack traces
+  finalTraces <- showTraceTree' dappInfo finalVM
   pure $ "failed!💥  \n  Call sequence" <> status <> ":\n"
          <> unlines (("    " <>) <$> prettyTxs) <> "\n"
-         <> "Test traces: \n" <> T.unpack (showTraceTree dappInfo finalVM)
+         <> "Test traces: \n" <> T.unpack finalTraces
 
 -- | Pretty-print the status of a test.
 
@@ -202,9 +210,10 @@ ppOptimized b vm xs = do
         Just (n,m) -> ", shrinking " <> progress n m
   prettyTxs <- mapM (ppTx vm $ length (nub $ (.src) <$> xs) /= 1) xs
   dappInfo <- asks (.dapp)
+  traces <- showTraceTree' dappInfo vm
   pure $ "\n  Call sequence" <> status <> ":\n"
          <> unlines (("    " <>) <$> prettyTxs) <> "\n"
-         <> "Traces: \n" <> T.unpack (showTraceTree dappInfo vm)
+         <> "Traces: \n" <> T.unpack traces
 
 -- | Pretty-print the status of all 'SolTest's in a 'Campaign'.
 ppTests :: (MonadReader Env m, MonadIO m) => [EchidnaTest] -> m String

@@ -17,6 +17,7 @@ import Data.Map qualified as Map
 import Data.Maybe (isJust, isNothing, catMaybes, listToMaybe, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String.AnsiEscapeCodes.Strip.Text (stripAnsiEscapeCodes)
 import Data.Text (Text, isPrefixOf, isSuffixOf, append)
 import Data.Text qualified as T
 import Optics.Core hiding (filtered)
@@ -220,8 +221,9 @@ loadSpecified env mainContract cs = do
       deployment = if coverageEnabled then snd <$> runStateT (execTxWithCov deployTx) vm2 else snd <$> execTx vm2 deployTx
 
     vm3 <- deployment
-    when (isNothing $ currentContract vm3) $
-      throwM $ DeploymentFailed solConf.contractAddr $ showTraceTree env.dapp vm3
+    when (isNothing $ currentContract vm3) $ do
+      let traces = if env.cfg.useColor then showTraceTree env.dapp vm3 else stripAnsiEscapeCodes (showTraceTree env.dapp vm3)
+      throwM $ DeploymentFailed solConf.contractAddr traces
 
     -- Run setUp function
     let
@@ -242,7 +244,9 @@ loadSpecified env mainContract cs = do
               else pure vm3
 
     case vm4.result of
-      Just (VMFailure _) -> throwM $ SetUpCallFailed $ showTraceTree env.dapp vm4
+      Just (VMFailure _) -> do
+        let traces = if env.cfg.useColor then showTraceTree env.dapp vm4 else stripAnsiEscapeCodes (showTraceTree env.dapp vm4)
+        throwM $ SetUpCallFailed traces
       _ -> pure vm4
 
   where

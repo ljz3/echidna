@@ -53,6 +53,7 @@ data EConfig = EConfig
   , etherscanApiKey :: Maybe Text
   , projectName :: Maybe Text
   , disableOnchainSources :: Bool
+  , useColor :: Bool
   }
 
 instance Read OutputFormat where

@@ -39,6 +39,8 @@ configTests = testGroup "Configuration tests" $
       assertBool "" $ isNothing (defaultConfig.campaignConf.corpusDir)
   , testCase "coverageDir defaults to Nothing" $
       assertBool "" $ isNothing (defaultConfig.campaignConf.coverageDir)
+  , testCase "useColor defaults to True" $
+      assertBool "" $ defaultConfig.useColor
   , testCase "default.yaml" $ do
       EConfigWithUsage _ bad unset <- parseConfig "basic/default.yaml"
       assertBool ("unused options: " ++ show bad) $ null bad
